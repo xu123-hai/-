@@ -1,0 +1,28 @@
+{
+  "dataset_name": "人机运动性能测试自建样例数据集",
+  "data_type": "自建数据(self-built)",
+  "source": "网页端人机运动性能测试实时采集（样例为模拟生成，见 scripts/generate_sample_data.py）",
+  "version": "1.0",
+  "preprocessing_version": "1.0",
+  "raw_file": "data/raw/sample_test_data.csv",
+  "processed_files": {
+    "cleaned_detail": "data/processed/cleaned_test_data.csv",
+    "test_statistics": "data/processed/test_statistics.csv"
+  },
+  "preprocess_script": "scripts/preprocess.py",
+  "outlier_method": "均值±3σ（按测试类型×指标分组）",
+  "derived_metric": "hit_rate = hit_count / target_total",
+  "summary": {
+    "raw_records": 60,
+    "after_clean": 60,
+    "after_outlier_removal": 56,
+    "removed_records": 4,
+    "test_types": [
+      "aim",
+      "calib",
+      "flick",
+      "track"
+    ]
+  },
+  "updated_at": "2026-08-29"
+}
