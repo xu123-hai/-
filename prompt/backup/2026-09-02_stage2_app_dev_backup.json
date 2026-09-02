@@ -1,0 +1,43 @@
+{
+  "stage": "stage2_网页端原型应用开发",
+  "date": "2026-09-02",
+  "ai_tool": "豆包（Doubao）",
+  "description": "本阶段开发课程设计核心交付物：纯前端单 HTML 网页应用，实现四类人机运动性能测试模块、Canvas 虚拟仿真、数据采集统计与参数匹配算法。",
+  "messages": [
+    {
+      "timestamp": "2026-09-02",
+      "stage": "stage2",
+      "role": "user",
+      "content": "继续弄吧",
+      "note": "用户指示继续推进课程设计（上一阶段已完成数据来源与预处理）"
+    },
+    {
+      "timestamp": "2026-09-02",
+      "stage": "stage2",
+      "role": "assistant",
+      "content": "依据方案设计 3.3/3.5 节与技术路线，确认下一步为开发核心网页原型。规划：单 HTML（index.html）实现 ①基础参数录入 ②虚拟仿真测试区 ③结果输出三大区域，包含定点定位/动态追踪/快速切换/物理标定四套测试模块、Canvas 绘制与碰撞检测、倒计时、数据采集统计、加权参数匹配算法、一键复制、重置、导出 CSV。",
+      "note": "AI 规划本阶段开发范围"
+    },
+    {
+      "timestamp": "2026-09-02",
+      "stage": "stage2",
+      "role": "assistant",
+      "content": "完成 index.html 开发（约28KB单文件）。要点：60FPS requestAnimationFrame 主循环、时间戳倒计时（避免setInterval卡顿）、碰撞检测命中判定（无需点击）、追踪目标变速变向、物理标定物理位移-虚拟转动换算、参数匹配算法（速度/精度分项得分+习惯权重修正→灵敏度/加速度/平滑/阈值映射）、CSV导出格式与仓库/data样例一致。",
+      "note": "AI 交付原型实现"
+    },
+    {
+      "timestamp": "2026-09-02",
+      "stage": "stage2",
+      "role": "assistant",
+      "content": "本地浏览器端到端验证：四套测试模块逐一真实运行（定点定位命中10次、动态追踪1431帧、快速切换12命中、物理标定629px/251.7°/2.0cm），统计面板与参数输出正确（综合得分、灵敏度、cm/360等效），导出CSV功能正常，无脚本错误。",
+      "note": "AI 验证结果"
+    },
+    {
+      "timestamp": "2026-09-02",
+      "stage": "stage2",
+      "role": "assistant",
+      "content": "将 index.html 推送至 GitHub 仓库根目录，更新 README 运行方式，新增本阶段 prompt 记录并备份。",
+      "note": "AI 交付说明"
+    }
+  ]
+}
