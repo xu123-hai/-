@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人机运动性能评估与参数匹配生成器</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#273449; --line:#334155;
+    --txt:#e2e8f0; --dim:#94a3b8; --accent:#38bdf8; --ok:#34d399; --warn:#fbbf24; --err:#f87171;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+    min-height:100vh; padding:16px;
+  }
+  header h1{font-size:22px; margin-bottom:4px;}
+  header p{color:var(--dim); font-size:13px; margin-bottom:16px;}
+  .layout{display:grid; grid-template-columns:300px 1fr 320px; gap:14px; align-items:start;}
+  @media (max-width:1100px){ .layout{grid-template-columns:1fr;} }
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px;}
+  .panel h2{font-size:15px; margin-bottom:12px; color:var(--accent); border-left:3px solid var(--accent); padding-left:8px;}
+  label{display:block; font-size:12px; color:var(--dim); margin:10px 0 4px;}
+  input[type=text],input[type=number],select{
+    width:100%; padding:7px 9px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel2); color:var(--txt); font-size:13px; outline:none;
+  }
+  input:focus,select:focus{border-color:var(--accent);}
+  .hint{font-size:11px; color:var(--dim); margin-top:3px; line-height:1.5;}
+  .row{display:flex; gap:8px; align-items:center;}
+  .row > *{flex:1;}
+  .btn{
+    display:inline-block; padding:8px 14px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel2); color:var(--txt); font-size:13px; cursor:pointer; transition:.15s;
+  }
+  .btn:hover{border-color:var(--accent); color:var(--accent);}
+  .btn.primary{background:var(--accent); color:#062033; border-color:var(--accent); font-weight:600;}
+  .btn.primary:hover{filter:brightness(1.1); color:#062033;}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+  .btn.small{padding:5px 10px; font-size:12px;}
+  .test-btns{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;}
+  .test-btns .btn{text-align:left; font-size:12.5px; padding:9px 10px;}
+  .test-btns .btn.active{border-color:var(--accent); background:#0c2a3d; color:var(--accent);}
+  #canvasWrap{position:relative; width:100%;}
+  canvas{width:100%; height:auto; display:block; background:#0b1220; border:1px solid var(--line); border-radius:10px; cursor:none; touch-action:none;}
+  #overlay{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(11,18,32,.72); border-radius:10px; text-align:center; gap:10px; pointer-events:none;
+  }
+  #overlay .big{font-size:30px; font-weight:700;}
+  #overlay .sub{color:var(--dim); font-size:14px; max-width:420px; line-height:1.6;}
+  #overlay.hidden{display:none;}
+  #statusbar{display:flex; justify-content:space-between; margin-top:8px; font-size:12px; color:var(--dim);}
+  #statusbar b{color:var(--txt);}
+  table{width:100%; border-collapse:collapse; font-size:12px;}
+  th,td{padding:5px 6px; border-bottom:1px solid var(--line); text-align:left;}
+  th{color:var(--dim); font-weight:400;}
+  .stat-badge{font-size:11px; color:var(--dim); margin-top:10px;}
+  #paramsOut .param-item{display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px dashed var(--line); font-size:13px;}
+  #paramsOut .param-item .k{color:var(--dim);}
+  #paramsOut .param-item .v{font-weight:600; color:var(--accent);}
+  #copyResult{width:100%; margin-top:10px;}
+  #toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:#065f46; color:#d1fae5; padding:10px 20px; border-radius:10px; font-size:13px;
+    opacity:0; transition:.25s; pointer-events:none; z-index:99;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .note{font-size:11px; color:var(--dim); margin-top:8px; line-height:1.5;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>面向人机运动性能评估的网页端参数匹配生成器</h1>
+  <p>在浏览器中完成定点定位 / 动态追踪 / 快速切换 / 物理标定四类虚拟测试，采集运动行为数据并生成个性化控制参数（纯前端 · 无需后端）</p>
+</header>
+
+<div class="layout">
+
+  <!-- ============ 左：基础参数录入 ============ -->
+  <div class="panel">
+    <h2>① 基础参数录入</h2>
+    <label>测试者编号（user_id）</label>
+    <input type="text" id="userId" value="U001">
+    <label>鼠标 DPI（硬件参数）</label>
+    <input type="number" id="dpi" value="800" min="200" max="16000" step="50">
+    <label>握鼠习惯</label>
+    <select id="grip">
+      <option value="claw" selected>抓握（claw）</option>
+      <option value="palm">趴握（palm）</option>
+      <option value="fingertip">指握（fingertip）</option>
+    </select>
+    <label>操作习惯 · 速度/精度倾向</label>
+    <select id="habit">
+      <option value="balanced" selected>均衡</option>
+      <option value="speed">速度优先</option>
+      <option value="precision">精度优先</option>
+    </select>
+    <label>每种测试轮数（多轮取均值）</label>
+    <input type="number" id="trialCount" value="3" min="1" max="9">
+    <div class="hint">提示：测试完成后可点击下方“导出测试数据 CSV”，数据格式与仓库 /data 中样例一致。</div>
+  </div>
+
+  <!-- ============ 中：虚拟仿真测试区 ============ -->
+  <div class="panel">
+    <h2>② 虚拟仿真测试区</h2>
+    <div class="test-btns">
+      <button class="btn" data-test="aim">🎯 定点定位</button>
+      <button class="btn" data-test="track">🔄 动态追踪</button>
+      <button class="btn" data-test="flick">⚡ 快速切换</button>
+      <button class="btn" data-test="calib">📏 物理标定</button>
+    </div>
+    <div id="canvasWrap">
+      <canvas id="testCanvas" width="900" height="520"></canvas>
+      <div id="overlay">
+        <div class="big" id="ovBig">准备开始</div>
+        <div class="sub" id="ovSub">请先选择测试项目，点击“开始测试”</div>
+      </div>
+    </div>
+    <div id="statusbar">
+      <span>状态：<b id="stState">空闲</b></span>
+      <span>项目：<b id="stType">—</b></span>
+      <span>轮次：<b id="stTrial">0/0</b></span>
+      <span>命中：<b id="stHit">0</b></span>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn primary" id="btnStart">开始测试</button>
+      <button class="btn" id="btnReset">重置数据</button>
+      <button class="btn" id="btnExport">导出测试数据 CSV</button>
+    </div>
+    <div class="note" id="testHint">选择测试项目后点击“开始测试”。</div>
+  </div>
+
+  <!-- ============ 右：结果输出 ============ -->
+  <div class="panel">
+    <h2>③ 测试统计与参数输出</h2>
+    <div id="statsArea">
+      <div class="stat-badge">尚未完成测试，先完成至少 1 轮测试。</div>
+    </div>
+    <h2 style="margin-top:16px;">生成控制参数</h2>
+    <div id="paramsOut">
+      <div class="stat-badge">完成测试后自动计算个性化控制参数。</div>
+    </div>
+    <button class="btn" id="copyResult">一键复制参数</button>
+    <div class="note">参数可粘贴导入控制软件；派生指标 cm/360 由物理标定测试换算。</div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+ * 人机运动性能评估与参数匹配生成器
+ * 课程设计：面向人机运动性能评估的网页端参数匹配生成器
+ * 纯前端实现，全部计算在浏览器本地完成
+ * ===================================================================== */
+
+// ---------------- DOM 引用 ----------------
+const canvas   = document.getElementById("testCanvas");
+const ctx      = canvas.getContext("2d");
+const overlay  = document.getElementById("overlay");
+const ovBig    = document.getElementById("ovBig");
+const ovSub    = document.getElementById("ovSub");
+const stState  = document.getElementById("stState");
+const stType   = document.getElementById("stType");
+const stTrial  = document.getElementById("stTrial");
+const stHit    = document.getElementById("stHit");
+const btnStart = document.getElementById("btnStart");
+const testHint = document.getElementById("testHint");
+
+// ---------------- 全局配置 ----------------
+const CFG = {
+  aimDurationMs: 12000,        // 定点定位：单轮时长(ms)
+  trackDurationMs: 10000,      // 动态追踪：单轮时长(ms)
+  flickTargets: 12,            // 快速切换：单轮目标数
+  hitRadius: 18,               // 命中判定半径(px)
+  targetR: 15,                 // 目标半径(px)
+  crossR: 7,                   // 准星半径(px)
+};
+
+// ---------------- 状态 ----------------
+const S = {
+  testType: null,              // aim | track | flick | calib
+  status: "idle",              // idle | countdown | running | finished
+  trialIdx: 0,                 // 已完成轮数
+  trialTotal: 3,
+  trialStart: 0,               // 当前轮开始时间戳
+  trialEnd: 0,
+  // 当前轮内部数据
+  aim: {target:{x:0,y:0,r:CFG.targetR}, hits:[], hitCount:0, targetSpawnAt:0},
+  track:{pos:{x:0,y:0,vx:0,vy:0}, err:0, errSum:0, errN:0, hitFrames:0, totalFrames:0},
+  flick:{x:0,y:0,r:CFG.targetR, spawnAt:0, hits:[], hitCount:0},
+  calib:{started:false, startX:0, pixels:0, virtualDeg:0, physicalCm:0},
+  // 已完成的全部轮次数据（用于导出 CSV）
+  allRecords: [],
+  // 当前轮统计结果（计算参数用）
+  stats: {aim:null, track:null, flick:null, calib:null},
+};
+
+// 鼠标准星位置（canvas 坐标系）
+const mouse = {x:0, y:0};
+
+// ---------------- 工具函数 ----------------
+function now(){ return performance.now(); }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function dist(ax,ay,bx,by){ return Math.hypot(ax-bx, ay-by); }
+function mean(a){ return a.length ? a.reduce((s,v)=>s+v,0)/a.length : 0; }
+function stdev(a){
+  if(a.length < 2) return 0;
+  const m = mean(a);
+  return Math.sqrt(a.reduce((s,v)=>s+(v-m)*(v-m),0)/(a.length-1));
+}
+function median(a){
+  if(!a.length) return 0;
+  const b=[...a].sort((x,y)=>x-y), n=b.length;
+  return n%2 ? b[(n-1)/2] : (b[n/2-1]+b[n/2])/2;
+}
+function round(v,d=2){ return Math.round(v*Math.pow(10,d))/Math.pow(10,d); }
+function fmt(n,d=2){ return (typeof n==="number" && isFinite(n)) ? n.toFixed(d) : "—"; }
+
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+// ---------------- 界面辅助 ----------------
+function setState(text){ stState.textContent = text; }
+function setType(text){ stType.textContent = text; }
+function setTrial(){ stTrial.textContent = `${S.trialIdx}/${S.trialTotal}`; }
+function setHit(n){ stHit.textContent = n; }
+function showOverlay(big, sub){
+  ovBig.textContent = big; ovSub.textContent = sub;
+  overlay.classList.remove("hidden");
+}
+function hideOverlay(){ overlay.classList.add("hidden"); }
+
+// ---------------- 用户参数读取 ----------------
+function userParams(){
+  return {
+    user_id: document.getElementById("userId").value.trim() || "U001",
+    dpi: parseInt(document.getElementById("dpi").value) || 800,
+    grip: document.getElementById("grip").value,
+    habit: document.getElementById("habit").value,
+  };
+}
+
+// ---------------- 测试项目选择 ----------------
+document.querySelectorAll(".test-btns .btn").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    if(S.status !== "idle" && S.status !== "finished"){ toast("请先完成当前测试"); return; }
+    document.querySelectorAll(".test-btns .btn").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    S.testType = b.dataset.test;
+    const names = {aim:"定点定位",track:"动态追踪",flick:"快速切换",calib:"物理标定"};
+    setType(names[S.testType]);
+    testHint.textContent = {
+      aim:"移动准星对准目标即命中（无需点击）。单轮 12 秒，统计响应时间与定位误差。",
+      track:"跟随移动目标，保持准星贴近目标中心。单轮 10 秒，统计追踪误差。",
+      flick:"目标随机出现在远处，快速移动准星命中。单轮 12 个目标，统计响应时间。",
+      calib:"从左侧竖线起快速平移准星到右侧竖线，完成物理位移-虚拟转动标定。",
+    }[S.testType];
+    if(S.status === "finished"){ S.status = "idle"; setState("空闲"); }
+    draw();
+  });
+});
+
+// ---------------- 画布 & 鼠标事件 ----------------
+canvas.addEventListener("mousemove", e=>{
+  const r = canvas.getBoundingClientRect();
+  mouse.x = (e.clientX - r.left) * (canvas.width / r.width);
+  mouse.y = (e.clientY - r.top)  * (canvas.height / r.height);
+});
+canvas.addEventListener("mouseleave", ()=>{
+  // 离开画布时把准星移到画布外，避免误判
+  mouse.x = -999; mouse.y = -999;
+});
+
+// ---------------- 测试主流程 ----------------
+function startTest(){
+  if(!S.testType){ toast("请先选择测试项目"); return; }
+  if(S.status === "running" || S.status === "countdown") return;
+  S.trialTotal = clamp(parseInt(document.getElementById("trialCount").value)||3, 1, 9);
+  S.trialIdx = 0;
+  setTrial();
+  beginTrial();
+}
+
+function beginTrial(){
+  // 进入倒计时
+  S.status = "countdown";
+  setState("倒计时");
+  showOverlay("3", "准备开始，请将准星置于画布中心附近");
+  let n = 3;
+  const cd = setInterval(()=>{
+    n--;
+    if(n <= 0){
+      clearInterval(cd);
+      hideOverlay();
+      runTrial();
+    } else {
+      ovBig.textContent = String(n);
+    }
+  }, 800);
+}
+
+function runTrial(){
+  S.status = "running";
+  setState("测试中");
+  S.trialStart = now();
+
+  if(S.testType === "aim"){ initAim(); }
+  else if(S.testType === "track"){ initTrack(); }
+  else if(S.testType === "flick"){ initFlick(); }
+  else if(S.testType === "calib"){ initCalib(); }
+
+  requestAnimationFrame(loop);
+}
+
+function endTrial(){
+  // 结算当前轮，记录数据
+  const rec = collectTrialRecord();
+  if(rec) S.allRecords.push(rec);
+  S.trialIdx++;
+  setTrial();
+  updateStatsFromRecords();
+
+  if(S.trialIdx >= S.trialTotal){
+    S.status = "finished";
+    setState("已完成");
+    showOverlay("测试完成", "各项测试统计与控制参数已生成，见右侧面板。");
+    computeParams();
+    draw();
+  } else {
+    S.status = "idle";
+    setState("等待下一轮");
+    showOverlay("准备下一轮", `已完成 ${S.trialIdx}/${S.trialTotal} 轮，点击“开始测试”继续。`);
+    draw();
+  }
+}
+
+// ---------------- 各测试初始化 ----------------
+function initAim(){
+  S.aim.hits = []; S.aim.hitCount = 0;
+  spawnAimTarget();
+  S.trialEnd = S.trialStart + CFG.aimDurationMs;
+}
+function spawnAimTarget(){
+  const pad = 60;
+  const t = S.aim.target;
+  t.r = CFG.targetR;
+  t.x = pad + Math.random()*(canvas.width - pad*2);
+  t.y = pad + Math.random()*(canvas.height - pad*2);
+  S.aim.targetSpawnAt = now();
+}
+
+function initTrack(){
+  S.track = {pos:{x:canvas.width/2, y:canvas.height/2, vx:120, vy:80}, err:0,
+             errSum:0, errN:0, hitFrames:0, totalFrames:0};
+  S.trialEnd = S.trialStart + CFG.trackDurationMs;
+}
+
+function initFlick(){
+  S.flick.hits = []; S.flick.hitCount = 0;
+  spawnFlickTarget(true);
+}
+function spawnFlickTarget(first){
+  const pad = 70, r = CFG.targetR;
+  let x,y, attempts=0;
+  do {
+    x = pad + Math.random()*(canvas.width - pad*2);
+    y = pad + Math.random()*(canvas.height - pad*2);
+    attempts++;
+  } while(!first && dist(x,y,mouse.x,mouse.y) < 180 && attempts < 50); // 远离当前准星
+  S.flick.x = x; S.flick.y = y; S.flick.r = r;
+  S.flick.spawnAt = now();
+}
+
+function initCalib(){
+  S.calib = {started:false, startX:0, pixels:0, virtualDeg:0, physicalCm:0};
+}
+
+// ---------------- 主循环（60FPS） ----------------
+function loop(ts){
+  if(S.status !== "running") return;
+
+  if(S.testType === "aim")      updateAim();
+  else if(S.testType === "track") updateTrack(ts);
+  else if(S.testType === "flick") updateFlick();
+  else if(S.testType === "calib") updateCalib();
+
+  draw();
+
+  // 轮次结束判定
+  const done =
+    (S.testType === "aim"   && now() >= S.trialEnd) ||
+    (S.testType === "track" && now() >= S.trialEnd) ||
+    (S.testType === "flick" && S.flick.hitCount >= CFG.flickTargets) ||
+    (S.testType === "calib" && S.calib.started && now() >= S.trialEnd);
+  if(done){ endTrial(); return; }
+
+  requestAnimationFrame(loop);
+}
+
+// ---------------- 各测试更新逻辑 ----------------
+function updateAim(){
+  const t = S.aim.target;
+  if(dist(mouse.x, mouse.y, t.x, t.y) < CFG.hitRadius){
+    // 命中：记录响应时间与定位误差
+    const rt = now() - S.aim.targetSpawnAt;
+    const err = dist(mouse.x, mouse.y, t.x, t.y);
+    S.aim.hits.push({rt, err});
+    S.aim.hitCount++;
+    setHit(S.aim.hitCount);
+    spawnAimTarget();
+  }
+}
+
+function updateTrack(ts){
+  const tr = S.track;
+  const dt = (ts - (S._lastTs || ts)) / 1000;
+  S._lastTs = ts;
+  // 目标做变速变向运动（正弦 + 随机扰动）
+  const t = now();
+  const dir = t / 1000;
+  tr.pos.x += (Math.sin(dir*1.7)*140 + 40) * dt;
+  tr.pos.y += (Math.cos(dir*1.2)*110 + 30) * dt;
+  // 边界反弹
+  if(tr.pos.x < 40 || tr.pos.x > canvas.width-40) tr.pos.x = clamp(tr.pos.x, 40, canvas.width-40);
+  if(tr.pos.y < 40 || tr.pos.y > canvas.height-40) tr.pos.y = clamp(tr.pos.y, 40, canvas.height-40);
+
+  const e = dist(mouse.x, mouse.y, tr.pos.x, tr.pos.y);
+  tr.errSum += e; tr.errN++;
+  if(e < CFG.hitRadius) tr.hitFrames++;
+  tr.totalFrames++;
+}
+
+function updateFlick(){
+  if(dist(mouse.x, mouse.y, S.flick.x, S.flick.y) < CFG.hitRadius){
+    const rt = now() - S.flick.spawnAt;
+    const err = dist(mouse.x, mouse.y, S.flick.x, S.flick.y);
+    S.flick.hits.push({rt, err});
+    S.flick.hitCount++;
+    setHit(S.flick.hitCount);
+    if(S.flick.hitCount < CFG.flickTargets) spawnFlickTarget(false);
+  }
+}
+
+function updateCalib(){
+  const c = S.calib;
+  const startLine = canvas.width * 0.12;
+  const endLine   = canvas.width * 0.88;
+  if(!c.started){
+    if(mouse.x > startLine && mouse.x < canvas.width*0.35){
+      c.started = true;
+      c.startX = mouse.x;
+      S.trialEnd = now() + 6000; // 6 秒内完成一次平移
+    }
+    return;
+  }
+  if(mouse.x >= endLine){
+    const px = mouse.x - c.startX;
+    const p = userParams();
+    c.pixels = px;
+    c.virtualDeg = px / canvas.width * 360;          // 虚拟视角转动量(度)
+    c.physicalCm = px / p.dpi * 2.54;                // 物理移动距离(cm)
+    endTrial();
+  }
+}
+
+// ---------------- 数据记录与统计 ----------------
+function collectTrialRecord(){
+  const p = userParams();
+  const nowStr = new Date().toLocaleString("sv-SE").replace("T"," ");
+  const t = S.testType;
+  let rec = {
+    session_id: "WEB-" + Date.now().toString().slice(-6),
+    user_id: p.user_id, test_type: t, trial_no: S.trialIdx+1,
+    response_time_ms:"", positioning_error_px:"", tracking_error_px:"",
+    hit_count:"", target_total:"", physical_move_cm:"", virtual_rotate_deg:"",
+    device_dpi: p.dpi, habit_grip: p.grip, timestamp: nowStr,
+  };
+  if(t === "aim"){
+    const rts = S.aim.hits.map(h=>h.rt), errs = S.aim.hits.map(h=>h.err);
+    rec.response_time_ms = round(mean(rts),2);
+    rec.positioning_error_px = round(mean(errs),2);
+    rec.hit_count = S.aim.hitCount; rec.target_total = "duration";
+  } else if(t === "track"){
+    rec.tracking_error_px = round(S.track.errSum / Math.max(1,S.track.errN),2);
+    rec.hit_count = S.track.hitFrames; rec.target_total = S.track.totalFrames;
+  } else if(t === "flick"){
+    const rts = S.flick.hits.map(h=>h.rt), errs = S.flick.hits.map(h=>h.err);
+    rec.response_time_ms = round(mean(rts),2);
+    rec.positioning_error_px = round(mean(errs),2);
+    rec.hit_count = S.flick.hitCount; rec.target_total = CFG.flickTargets;
+  } else if(t === "calib"){
+    rec.physical_move_cm = round(S.calib.physicalCm,2);
+    rec.virtual_rotate_deg = round(S.calib.virtualDeg,2);
+    rec.hit_count = 1; rec.target_total = 1;
+  }
+  return rec;
+}
+
+function updateStatsFromRecords(){
+  const types = ["aim","track","flick","calib"];
+  types.forEach(tp=>{
+    const rows = S.allRecords.filter(r=>r.test_type===tp);
+    if(!rows.length){ S.stats[tp]=null; return; }
+    const g = (k)=>{
+      const a = rows.map(r=>parseFloat(r[k])).filter(v=>isFinite(v));
+      return a.length ? {mean:mean(a), std:stdev(a), med:median(a), n:a.length} : null;
+    };
+    if(tp==="aim"){
+      const rt=g("response_time_ms"), pe=g("positioning_error_px");
+      const hr=mean(rows.map(r=>r.hit_count==="duration"?0:r.hit_count).filter(v=>isFinite(v)));
+      S.stats.aim={rt, pe, hitN: rows.reduce((s,r)=>s+(r.hit_count==="duration"?0:parseFloat(r.hit_count)||0),0)};
+    } else if(tp==="track"){
+      S.stats.track={te:g("tracking_error_px")};
+    } else if(tp==="flick"){
+      S.stats.flick={rt:g("response_time_ms"), pe:g("positioning_error_px")};
+    } else if(tp==="calib"){
+      S.stats.calib={cm:g("physical_move_cm"), deg:g("virtual_rotate_deg")};
+    }
+  });
+  renderStats();
+}
+
+// ---------------- 统计展示 ----------------
+function renderStats(){
+  const area = document.getElementById("statsArea");
+  const rows = [];
+  const add=(k,v)=>rows.push(`<tr><td>${k}</td><td>${v}</td></tr>`);
+  const s=S.stats;
+  if(s.aim){ add("定点定位 · 响应时间(ms)","均值 "+(s.aim.rt?fmt(s.aim.rt.mean,1):"—")+" ｜ 中位 "+fmt(s.aim.rt? s.aim.rt.med:0,1)); add("定点定位 · 定位误差(px)","均值 "+(s.aim.pe?fmt(s.aim.pe.mean,2):"—")); add("定点定位 · 命中","均值 "+(s.aim.rt?fmt(s.aim.hitN/Math.max(1,(S.allRecords.filter(r=>r.test_type==="aim").length)),1):"—")+" 个/轮"); }
+  if(s.track){ add("动态追踪 · 追踪误差(px)","均值 "+(s.track.te?fmt(s.track.te.mean,2):"—")+" ｜ 中位 "+fmt(s.track.te? s.track.te.med:0,2)); }
+  if(s.flick){ add("快速切换 · 响应时间(ms)","均值 "+(s.flick.rt?fmt(s.flick.rt.mean,1):"—")+" ｜ 中位 "+fmt(s.flick.rt? s.flick.rt.med:0,1)); add("快速切换 · 定位误差(px)","均值 "+(s.flick.pe?fmt(s.flick.pe.mean,2):"—")); }
+  if(s.calib){ add("物理标定 · 移动(cm)","均值 "+(s.calib.cm?fmt(s.calib.cm.mean,2):"—")); add("物理标定 · 转动(°)","均值 "+(s.calib.deg?fmt(s.calib.deg.mean,1):"—")); }
+  area.innerHTML = rows.length
+    ? `<table>${rows.map(r=>r).join("")}</table>`
+    : `<div class="stat-badge">尚未完成测试。</div>`;
+}
+
+// ---------------- 参数匹配算法 ----------------
+function computeParams(){
+  const s=S.stats;
+  const p=userParams();
+
+  // 分项得分（0~100），基线参考值
+  const aimRT = s.aim && s.aim.rt ? s.aim.rt.mean : null;
+  const aimPE = s.aim && s.aim.pe ? s.aim.pe.mean : null;
+  const trTE = s.track && s.track.te ? s.track.te.mean : null;
+  const flRT = s.flick && s.flick.rt ? s.flick.rt.mean : null;
+  const flPE = s.flick && s.flick.pe ? s.flick.pe.mean : null;
+
+  const scoreSpeed = rt  => clamp(100*(1 - rt/500), 0, 100);   // 500ms 为基线
+  const scorePrec  = pe  => clamp(100*(1 - pe/20), 0, 100);    // 20px 为基线
+  const scoreTrack = te  => clamp(100*(1 - te/28), 0, 100);    // 28px 为基线
+
+  let aimScore=null, trackScore=null, flickScore=null;
+  if(aimRT!=null && aimPE!=null) aimScore = 0.45*scoreSpeed(aimRT) + 0.45*scorePrec(aimPE) + 10;
+  if(trTE!=null) trackScore = 0.85*scoreTrack(trTE) + 15;
+  if(flRT!=null && flPE!=null) flickScore = 0.5*scoreSpeed(flRT) + 0.35*scorePrec(flPE) + 15;
+
+  const have = [aimScore, trackScore, flickScore].filter(v=>v!=null);
+  const overall = have.length ? mean(have) : null;
+
+  // 习惯权重修正（速度/精度倾向）
+  let habitAdj = 0;
+  if(p.habit==="speed") habitAdj = 5;
+  else if(p.habit==="precision") habitAdj = -5;
+  const final = overall!=null ? clamp(overall + habitAdj, 0, 100) : null;
+
+  // 映射控制参数区间
+  const sensitivity = final!=null ? round(0.8 + final/100*0.7, 2) : null;         // 0.8~1.5 倍率
+  const acceleration = final!=null ? round(clamp(final/100*1.2 - 0.1, 0, 1), 2):null; // 0~1 加速度因子
+  const smoothing   = final!=null ? round(clamp(10 - final/10, 0, 10), 1):null;   // 0~10 平滑强度（速度型用户更小）
+  const threshold   = final!=null ? round(clamp(8 - final/25, 2, 8), 1):null;     // 响应判定阈值(px)
+  // 派生：cm/360（标定换算）
+  let cm360 = null;
+  if(s.calib && s.calib.cm && s.calib.deg){
+    const cm = s.calib.cm.mean, deg = s.calib.deg.mean;
+    cm360 = deg>0 ? round(cm / deg * 360, 2) : null;
+  }
+
+  // 渲染
+  const out = document.getElementById("paramsOut");
+  const items = [];
+  const add=(k,v)=>items.push(`<div class="param-item"><span class="k">${k}</span><span class="v">${v}</span></div>`);
+  add("综合运动性能得分", final!=null ? fmt(final,1)+" / 100" : "—");
+  add("鼠标灵敏度倍率", sensitivity!=null ? fmt(sensitivity,2)+"×" : "—");
+  add("加速度因子", acceleration!=null ? fmt(acceleration,2) : "—");
+  add("平滑滤波强度", smoothing!=null ? fmt(smoothing,1)+" / 10" : "—");
+  add("响应判定阈值", threshold!=null ? fmt(threshold,1)+" px" : "—");
+  if(cm360!=null) add("标定 · cm/360 等效", fmt(cm360,2)+" cm");
+  out.innerHTML = items.join("");
+
+  // 保存供复制
+  window._lastParams = {final, sensitivity, acceleration, smoothing, threshold, cm360};
+}
+
+// ---------------- 一键复制 ----------------
+document.getElementById("copyResult").addEventListener("click", ()=>{
+  const p = window._lastParams;
+  if(!p || p.final==null){ toast("请先完成测试生成参数"); return; }
+  const text =
+`人机运动性能评估结果（user: ${userParams().user_id}）
+综合运动性能得分：${fmt(p.final,1)} / 100
+灵敏度倍率：${fmt(p.sensitivity,2)}x
+加速度因子：${fmt(p.acceleration,2)}
+平滑滤波强度：${fmt(p.smoothing,1)} / 10
+响应判定阈值：${fmt(p.threshold,1)} px` +
+(p.cm360!=null ? `\ncm/360 等效：${fmt(p.cm360,2)} cm` : "");
+  // 使用 navigator.clipboard，若不可用则降级
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>toast("参数已复制到剪贴板")).catch(()=>fallbackCopy(text));
+  } else fallbackCopy(text);
+});
+function fallbackCopy(text){
+  const ta = document.createElement("textarea");
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); toast("参数已复制到剪贴板"); }
+  catch(e){ toast("复制失败，请手动复制"); }
+  document.body.removeChild(ta);
+}
+
+// ---------------- 重置 ----------------
+document.getElementById("btnReset").addEventListener("click", ()=>{
+  if(S.status==="running" || S.status==="countdown"){ toast("请先结束当前测试"); return; }
+  S.allRecords = [];
+  S.stats = {aim:null, track:null, flick:null, calib:null};
+  S.trialIdx = 0; setTrial(); setHit(0);
+  document.getElementById("statsArea").innerHTML = `<div class="stat-badge">尚未完成测试。</div>`;
+  document.getElementById("paramsOut").innerHTML = `<div class="stat-badge">完成测试后自动计算个性化控制参数。</div>`;
+  delete window._lastParams;
+  setState("空闲");
+  toast("已清空测试数据");
+});
+
+// ---------------- 导出 CSV ----------------
+document.getElementById("btnExport").addEventListener("click", ()=>{
+  if(!S.allRecords.length){ toast("暂无测试数据"); return; }
+  const head = ["session_id","user_id","test_type","trial_no","response_time_ms",
+    "positioning_error_px","tracking_error_px","hit_count","target_total",
+    "physical_move_cm","virtual_rotate_deg","device_dpi","habit_grip","timestamp"];
+  const esc = v => { v=String(v==null?"":v); return /[",\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+  const lines = [head.join(",")].concat(S.allRecords.map(r=>head.map(k=>esc(r[k])).join(",")));
+  const blob = new Blob(["\ufeff" + lines.join("\r\n")], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `hmi_test_data_${userParams().user_id}_${Date.now()}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  toast("已导出测试数据 CSV（格式与 /data 样例一致）");
+});
+
+// ---------------- 绘制 ----------------
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // 网格背景
+  ctx.strokeStyle = "rgba(148,163,184,0.08)";
+  ctx.lineWidth = 1;
+  for(let x=0;x<canvas.width;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+  for(let y=0;y<canvas.height;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+
+  // 标定测试参考线
+  if(S.testType==="calib"){
+    ctx.strokeStyle = "rgba(56,189,248,0.6)"; ctx.lineWidth=2; ctx.setLineDash([6,4]);
+    const sl=canvas.width*0.12, el=canvas.width*0.88;
+    ctx.beginPath(); ctx.moveTo(sl,0); ctx.lineTo(sl,canvas.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(el,0); ctx.lineTo(el,canvas.height); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // 目标
+  if(S.status==="running" || S.status==="countdown"){
+    if(S.testType==="aim" && S.aim.target){
+      drawTarget(S.aim.target.x, S.aim.target.y, S.aim.target.r, "#38bdf8");
+    } else if(S.testType==="track" && S.track.pos){
+      drawTarget(S.track.pos.x, S.track.pos.y, CFG.targetR, "#34d399");
+    } else if(S.testType==="flick"){
+      drawTarget(S.flick.x, S.flick.y, S.flick.r, "#fbbf24");
+    } else if(S.testType==="calib"){
+      drawTarget(canvas.width*0.12, canvas.height/2, 8, "#94a3b8");
+      drawTarget(canvas.width*0.88, canvas.height/2, 8, "#94a3b8");
+    }
+  }
+
+  // 准星
+  if(mouse.x>-100 && mouse.y>-100 && S.status==="running"){
+    ctx.strokeStyle = "#f8fafc"; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(mouse.x, mouse.y, CFG.crossR, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(mouse.x-CFG.crossR-5, mouse.y); ctx.lineTo(mouse.x-CFG.crossR+2, mouse.y);
+    ctx.moveTo(mouse.x+CFG.crossR-2, mouse.y); ctx.lineTo(mouse.x+CFG.crossR+5, mouse.y);
+    ctx.moveTo(mouse.x, mouse.y-CFG.crossR-5); ctx.lineTo(mouse.x, mouse.y-CFG.crossR+2);
+    ctx.moveTo(mouse.x, mouse.y+CFG.crossR-2); ctx.lineTo(mouse.x, mouse.y+CFG.crossR+5);
+    ctx.stroke();
+  }
+}
+
+function drawTarget(x,y,r,color){
+  ctx.fillStyle = color; ctx.globalAlpha=0.22;
+  ctx.beginPath(); ctx.arc(x,y,r+8,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle="#0f172a"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(x,y,r*0.5,0,Math.PI*2); ctx.stroke();
+}
+
+// ---------------- 初始化 ----------------
+btnStart.addEventListener("click", startTest);
+setTrial();
+draw();
+</script>
+</body>
+</html>
