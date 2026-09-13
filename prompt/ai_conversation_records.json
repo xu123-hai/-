@@ -2,7 +2,7 @@
   "project_name": "面向数控生产线刀具磨损状态识别与剩余寿命预测系统",
   "created_at": "2026-09-13",
   "updated_at": "2026-09-13",
-  "version": "v0.1",
+  "version": "v0.2",
   "ai_tool": "Doubao (豆包)",
   "conversation_records": [
     {
@@ -40,6 +40,47 @@
         "generate_sample_data.py",
         "preprocess.py"
       ]
+    },
+    {
+      "stage": "Git推送与认证阶段",
+      "timestamp": "2026-09-13 11:30:00",
+      "user_prompt": "现在怎么办（Git推送权限错误）",
+      "ai_response_summary": "指导用户完成GitHub认证流程：清除旧凭据、浏览器授权登录、成功推送代码",
+      "work_done": [
+        "诊断Git 403权限错误原因",
+        "指导Windows凭据管理器删除旧GitHub凭据",
+        "完成OAuth浏览器授权登录",
+        "成功推送代码到远程仓库"
+      ],
+      "errors_encountered": [
+        "Git Bash路径反斜杠转义错误",
+        "Git缓存旧账号导致403权限不足"
+      ]
+    },
+    {
+      "stage": "系统开发与集成阶段",
+      "timestamp": "2026-09-13 11:50:00",
+      "user_prompt": "跟据任务书完成前5个项目，已有部分完成的继续完善",
+      "ai_response_summary": "完成B/S架构系统搭建：Flask后端服务、前端可视化界面、算法预测模块、SQLite数据库",
+      "work_done": [
+        "搭建Flask后端服务，提供预测API、记录查询、统计接口",
+        "实现前端UI页面：预测表单、结果展示、历史记录、统计图表",
+        "实现算法模块：RandomForest磨损分类模型 + RUL回归预测模型",
+        "实现SQLite数据库存储预测记录",
+        "编写vibe_coding_notes.md记录Vibe Coding学习方法",
+        "完成前后端联调，业务流程闭环"
+      ],
+      "files_created": [
+        "app.py（Flask后端主应用）",
+        "templates/index.html（前端页面）",
+        "vibe_coding_notes.md（Vibe Coding学习记录）"
+      ],
+      "tech_stack": [
+        "后端：Python + Flask",
+        "前端：HTML + CSS + JavaScript + Chart.js",
+        "数据库：SQLite",
+        "算法：scikit-learn (RandomForest)"
+      ]
     }
   ],
   "prompt_update_log": [
@@ -47,6 +88,11 @@
       "version": "v0.1",
       "date": "2026-09-13",
       "description": "初始版本，记录选题和数据准备阶段的AI交互"
+    },
+    {
+      "version": "v0.2",
+      "date": "2026-09-13",
+      "description": "更新Git推送认证和系统开发集成阶段的AI交互记录"
     }
   ],
   "notes": [

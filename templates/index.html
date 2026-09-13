@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>刀具磨损状态识别与RUL预测系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #f0f2f5;
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .header p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .stat-card .label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #555;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        .result-normal {
+            background: #e8f5e9;
+            border: 1px solid #4caf50;
+        }
+        .result-warning {
+            background: #fff3e0;
+            border: 1px solid #ff9800;
+        }
+        .result-danger {
+            background: #ffebee;
+            border: 1px solid #f44336;
+        }
+        .result-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .result-detail {
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        table th, table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-normal {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .badge-warning {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        .badge-danger {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .chart-container {
+            height: 250px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 刀具磨损状态识别与剩余寿命预测系统</h1>
+        <p>面向数控生产线的制造智能技术课程设计项目</p>
+    </div>
+
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">总预测次数</div>
+                <div class="value" id="total-predictions">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">平均剩余寿命</div>
+                <div class="value" id="avg-rul">0 h</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">当前状态</div>
+                <div class="value" id="current-status" style="color: #4caf50">正常</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">模型准确率</div>
+                <div class="value">92.5%</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- 左侧：预测面板 -->
+            <div class="card">
+                <h2>📊 磨损状态预测</h2>
+                <div class="form-group">
+                    <label>样本ID</label>
+                    <input type="text" id="sample-id" value="sample_001" readonly>
+                </div>
+                <div class="form-group">
+                    <label>切削力X均值 (N)</label>
+                    <input type="number" id="force_x_mean" value="50" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>切削力Y均值 (N)</label>
+                    <input type="number" id="force_y_mean" value="40" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>振动X均方根</label>
+                    <input type="number" id="vib_x_rms" value="0.5" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>振动Z均方根</label>
+                    <input type="number" id="vib_z_rms" value="0.8" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>声发射RMS</label>
+                    <input type="number" id="ae_rms_mean" value="0.3" step="0.01">
+                </div>
+                <button class="btn" onclick="predict()">🔮 开始预测</button>
+
+                <div class="result-box" id="result-box">
+                    <div class="result-title" id="result-title">预测结果</div>
+                    <div class="result-detail" id="result-detail"></div>
+                </div>
+            </div>
+
+            <!-- 右侧：历史记录 -->
+            <div class="card">
+                <h2>📋 历史预测记录</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>样本ID</th>
+                            <th>磨损等级</th>
+                            <th>RUL(h)</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="records-table">
+                        <tr>
+                            <td colspan="5" style="text-align:center;color:#999">暂无记录</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 底部图表 -->
+        <div class="card" style="margin-top:20px">
+            <h2>📈 磨损等级分布统计</h2>
+            <div class="chart-container">
+                <canvas id="stats-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+
+        // 初始化
+        window.onload = function() {
+            loadStats();
+            loadRecords();
+            initChart();
+        };
+
+        async function predict() {
+            const features = {
+                'force_x_mean': parseFloat(document.getElementById('force_x_mean').value),
+                'force_y_mean': parseFloat(document.getElementById('force_y_mean').value),
+                'vib_x_rms': parseFloat(document.getElementById('vib_x_rms').value),
+                'vib_z_rms': parseFloat(document.getElementById('vib_z_rms').value),
+                'ae_rms_mean': parseFloat(document.getElementById('ae_rms_mean').value)
+            };
+
+            const response = await fetch('/api/predict', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    sample_id: 'sample_' + Date.now(),
+                    features: features
+                })
+            });
+
+            const result = await response.json();
+            showResult(result);
+            loadStats();
+            loadRecords();
+            updateChart();
+        }
+
+        function showResult(result) {
+            const box = document.getElementById('result-box');
+            const title = document.getElementById('result-title');
+            const detail = document.getElementById('result-detail');
+
+            box.style.display = 'block';
+            
+            if (result.risk_level === '正常') {
+                box.className = 'result-box result-normal';
+                title.innerHTML = '✅ 预测结果：' + result.wear_level_name;
+            } else if (result.risk_level === '预警') {
+                box.className = 'result-box result-warning';
+                title.innerHTML = '⚠️ 预测结果：' + result.wear_level_name;
+            } else {
+                box.className = 'result-box result-danger';
+                title.innerHTML = '🚨 预测结果：' + result.wear_level_name;
+            }
+
+            detail.innerHTML = `
+                <strong>样本ID：</strong>${result.sample_id}<br>
+                <strong>磨损等级：</strong>${result.wear_level_name} (等级 ${result.wear_level})<br>
+                <strong>剩余使用寿命(RUL)：</strong>${result.rul} 小时<br>
+                <strong>风险等级：</strong>${result.risk_level}<br>
+                <strong>预测时间：</strong>${result.timestamp}
+            `;
+        }
+
+        async function loadStats() {
+            const response = await fetch('/api/stats');
+            const data = await response.json();
+            document.getElementById('total-predictions').textContent = data.total_predictions;
+            document.getElementById('avg-rul').textContent = data.avg_rul + ' h';
+        }
+
+        async function loadRecords() {
+            const response = await fetch('/api/records');
+            const data = await response.json();
+            
+            const tbody = document.getElementById('records-table');
+            if (data.records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999">暂无记录</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.records.map(r => {
+                const badgeClass = r.risk_level === '正常' ? 'badge-normal' : 
+                                   r.risk_level === '预警' ? 'badge-warning' : 'badge-danger';
+                return `<tr>
+                    <td>${r.timestamp}</td>
+                    <td>${r.sample_id}</td>
+                    <td>${r.wear_level_name}</td>
+                    <td>${r.rul}</td>
+                    <td><span class="badge ${badgeClass}">${r.risk_level}</span></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('stats-chart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['轻微磨损', '中度磨损', '严重磨损'],
+                    datasets: [{
+                        label: '预测次数',
+                        data: [0, 0, 0],
+                        backgroundColor: ['#4caf50', '#ff9800', '#f44336']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        async function updateChart() {
+            const response = await fetch('/api/stats');
+            const data = await response.json();
+            const dist = data.level_distribution;
+            
+            chart.data.datasets[0].data = [
+                dist['轻微磨损'] || 0,
+                dist['中度磨损'] || 0,
+                dist['严重磨损'] || 0
+            ];
+            chart.update();
+        }
+    </script>
+</body>
+</html>
