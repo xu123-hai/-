@@ -1,0 +1,57 @@
+{
+  "project_name": "面向数控生产线刀具磨损状态识别与剩余寿命预测系统",
+  "created_at": "2026-09-13",
+  "updated_at": "2026-09-13",
+  "version": "v0.1",
+  "ai_tool": "Doubao (豆包)",
+  "conversation_records": [
+    {
+      "stage": "选题阶段",
+      "timestamp": "2026-09-13 10:30:00",
+      "user_prompt": "完成下列要求，其中选题说明和方案设计要以工业生产线为主例如零件磨损或产品合不合格等。选题说明要说明技术方向，要求从这个文件中选三个或3个以上的技术",
+      "ai_response_summary": "生成了选题说明和方案设计文档，选定刀具磨损状态识别与RUL预测为题目，涉及技术方向：特征工程、CNN深度学习、LSTM时序网络、PHM故障预测、机器学习评估",
+      "key_techniques_used": [
+        "特征工程（时域/频域特征提取）",
+        "CNN+LSTM混合模型",
+        "PHM故障预测与健康管理",
+        "模型评估指标（混淆矩阵、F1、RMSE）"
+      ]
+    },
+    {
+      "stage": "数据准备阶段",
+      "timestamp": "2026-09-13 11:00:00",
+      "user_prompt": "控制我的电脑，帮我完成以下目标，并且登录这个地址 https://github.com/xu123-hai/-.git 1. 数据来源-准备好完成课程设计所需数据 2. 数据预处理-根据项目需要，完成对原始数据的预处理工作 3. AI工具提示词追溯-创建一个prompt目录，将与AI交流的记录添加到这个目录下",
+      "ai_response_summary": "完成数据目录结构创建、示例数据生成、预处理脚本编写与运行",
+      "work_done": [
+        "克隆GitHub仓库",
+        "创建data目录结构（raw/processed）",
+        "生成刀具磨损示例数据集（200训练+50测试样本）",
+        "编写preprocess.py数据预处理脚本",
+        "完成数据清洗、异常值检测、特征标准化",
+        "创建prompt目录记录AI交流历史"
+      ],
+      "files_created": [
+        "data/README.md",
+        "data/raw/train_sample.csv",
+        "data/raw/test_sample.csv",
+        "data/processed/features_train.csv",
+        "data/processed/features_test.csv",
+        "data/processed/preprocess_stats.json",
+        "generate_sample_data.py",
+        "preprocess.py"
+      ]
+    }
+  ],
+  "prompt_update_log": [
+    {
+      "version": "v0.1",
+      "date": "2026-09-13",
+      "description": "初始版本，记录选题和数据准备阶段的AI交互"
+    }
+  ],
+  "notes": [
+    "本文件记录与AI助手的交流历史，用于课程设计的AI工具使用追溯",
+    "每个阶段完成后需更新此文件",
+    "上下文压缩前请及时备份并提交最新版本"
+  ]
+}

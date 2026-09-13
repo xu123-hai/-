@@ -1,0 +1,45 @@
+{
+  "train_samples": 200,
+  "test_samples": 50,
+  "feature_count": 28,
+  "features": [
+    "force_x_mean",
+    "force_x_std",
+    "force_x_rms",
+    "force_x_max",
+    "force_y_mean",
+    "force_y_std",
+    "force_y_rms",
+    "force_y_max",
+    "force_z_mean",
+    "force_z_std",
+    "force_z_rms",
+    "force_z_max",
+    "vib_x_mean",
+    "vib_x_std",
+    "vib_x_rms",
+    "vib_x_max",
+    "vib_y_mean",
+    "vib_y_std",
+    "vib_y_rms",
+    "vib_y_max",
+    "vib_z_mean",
+    "vib_z_std",
+    "vib_z_rms",
+    "vib_z_max",
+    "ae_rms_mean",
+    "ae_rms_std",
+    "ae_rms_rms",
+    "ae_rms_max"
+  ],
+  "wear_level_distribution": {
+    "0": 70,
+    "2": 66,
+    "1": 64
+  },
+  "preprocessing_steps": [
+    "缺失值检查 (无缺失)",
+    "IQR异常值检测与截断处理",
+    "Z-score标准化"
+  ]
+}
