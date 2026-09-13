@@ -10,8 +10,8 @@ import os
 import json
 
 # 配置
-RAW_DATA_DIR = 'data/raw'
-PROCESSED_DATA_DIR = 'data/processed'
+RAW_DATA_DIR = '../data/raw'
+PROCESSED_DATA_DIR = '../data/processed'
 
 def load_raw_data():
     """加载原始数据"""

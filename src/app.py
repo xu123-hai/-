@@ -10,11 +10,11 @@ import os
 import json
 from datetime import datetime
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../templates')
 CORS(app)
 
 # 数据库初始化
-DB_PATH = 'data/predictions.db'
+DB_PATH = '../data/predictions.db'
 
 def init_db():
     """初始化数据库"""
@@ -49,7 +49,7 @@ def train_model():
     global model_classifier, model_regressor, scaler, feature_cols
     
     # 加载预处理后的数据
-    train_df = pd.read_csv('data/processed/features_train.csv')
+    train_df = pd.read_csv('../data/processed/features_train.csv')
     
     label_cols = ['wear_level', 'rul']
     feature_cols = [col for col in train_df.columns if col not in label_cols]
@@ -184,7 +184,7 @@ def get_stats():
 @app.route('/api/sample-data', methods=['GET'])
 def get_sample_data():
     """获取示例测试数据"""
-    test_df = pd.read_csv('data/raw/test_sample.csv')
+    test_df = pd.read_csv('../data/raw/test_sample.csv')
     sample = test_df.iloc[0].to_dict()
     return jsonify({
         'success': True,

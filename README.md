@@ -31,25 +31,26 @@
 ├── 选题说明.md                # 选题背景、目标、技术方向
 ├── 方案设计.md                # 功能需求、方案论证、技术路线、计划安排
 ├── 学习笔记.md                # 课程学习笔记
-├── vibe_coding_notes.md       # Vibe Coding 方法学习记录
-├── generate_sample_data.py    # 示例数据生成脚本
-├── preprocess.py             # 数据预处理脚本
-├── app.py                    # Flask 后端主应用
 ├── requirements.txt          # Python 依赖清单
+├── src/                       # 源代码目录
+│   ├── app.py                 # Flask 后端主应用
+│   ├── preprocess.py          # 数据预处理脚本
+│   └── generate_sample_data.py # 示例数据生成脚本
 ├── data/                      # 数据目录
 │   ├── README.md              # 数据集详细说明
 │   ├── raw/                   # 原始数据
 │   │   ├── train_sample.csv   # 训练集示例
 │   │   └── test_sample.csv    # 测试集示例
 │   ├── processed/             # 预处理后数据
-│   │   ├── features_train.csv # 训练集特征
-│   │   ├── features_test.csv  # 测试集特征
+│   │   ├── features_train.csv  # 训练集特征
+│   │   ├── features_test.csv   # 测试集特征
 │   │   └── preprocess_stats.json # 预处理统计信息
-│   └── predictions.db        # SQLite 预测记录数据库
+│   └── predictions.db         # SQLite 预测记录数据库
 ├── templates/                 # 前端页面模板
 │   └── index.html             # 主界面
 └── prompt/                    # AI工具提示词追溯
-    └── ai_conversation_records.json  # AI交流记录
+    ├── ai_conversation_records.json  # AI交流记录
+    └── vibe_coding_notes.md   # Vibe Coding 学习记录
 ```
 
 ## 数据集说明
@@ -98,6 +99,7 @@ python preprocess.py
 
 ### 3. 启动系统
 ```bash
+cd src
 python app.py
 ```
 

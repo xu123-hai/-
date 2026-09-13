@@ -88,7 +88,7 @@ train_df = generate_dataset(n_samples_train, 'train')
 test_df = generate_dataset(n_samples_test, 'test')
 
 # 保存
-output_dir = 'data/raw'
+output_dir = '../data/raw'
 os.makedirs(output_dir, exist_ok=True)
 
 train_df.to_csv(os.path.join(output_dir, 'train_sample.csv'), index=False, encoding='utf-8-sig')
